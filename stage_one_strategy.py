@@ -1,4 +1,16 @@
+import random
+from typing import List, Optional
+
 from enums import Turn, MovementOption, BulletType, MovementResult
+
+
+def generate_random_bullet_list(blank_num: int, live_ammo_num: int) -> List[BulletType]:
+    bullet_list = [BulletType.BLANK] * blank_num + [BulletType.LIVE_AMMO] * live_ammo_num
+    random.shuffle(bullet_list)
+    return bullet_list
+
+def random_movement() -> MovementOption:
+    return random.choice(list(MovementOption))
 
 
 class GameStatus:
@@ -29,8 +41,8 @@ class GameStatus:
     def get_live_ammo_num(self):
         return self._live_ammo_num
 
-    def is_valid(self) -> bool:
-        return self._player_life >= 0 and self._dealer_life >= 0 and self._live_ammo_num >= 0 and self._blank_num >= 0
+    def is_valid_move(self, bullet: BulletType) -> bool:
+        return self._live_ammo_num > 0 if bullet == BulletType.LIVE_AMMO else self._blank_num > 0
 
     @staticmethod
     def get_move_result(move: MovementOption, bullet: BulletType) -> MovementResult:
@@ -43,10 +55,36 @@ class GameStatus:
         else:
             return MovementResult.KILL
 
-    def change_turn(self):
-        self._turn = Turn.DEALER if self._turn == Turn.PLAYER else Turn.DEALER
+    def update(self, move: MovementOption, bullet: BulletType, need_print_info: bool = False) -> 'GameStatus':
+        if need_print_info:
+            if self.is_player_turn():
+                print(f'It is player turn, player life: {self._player_life}, dealer life: {self._dealer_life}, '
+                      f'blank num: {self._blank_num}, live ammo num: {self._live_ammo_num}')
+                if move == MovementOption.SHOT_SELF:
+                    if bullet == BulletType.LIVE_AMMO:
+                        print("The player shoot himself with a live ammo.")
+                    else:
+                        print("The player shoot himself with a blank ammo.")
+                else:
+                    if bullet == BulletType.LIVE_AMMO:
+                        print("The player shoot dealer with a live ammo.")
+                    else:
+                        print("The player shoot dealer with a blank ammo.")
+            else:
+                print(f'It is dealer turn, player life: {self._player_life}, dealer life: {self._dealer_life}, '
+                      f'blank num: {self._blank_num}, live ammo num: {self._live_ammo_num}')
+                if move == MovementOption.SHOT_SELF:
+                    if bullet == BulletType.LIVE_AMMO:
+                        print("The dealer shoot himself with a live ammo.")
+                    else:
+                        print("The dealer shoot himself with a blank ammo.")
+                else:
+                    if bullet == BulletType.LIVE_AMMO:
+                        print("The dealer shoot player with a live ammo.")
+                    else:
+                        print("The dealer shoot player with a blank ammo.")
 
-    def update(self, move: MovementOption, bullet: BulletType) -> 'GameStatus':
+
         move_result: MovementResult = self.get_move_result(move, bullet)
 
         turn = self._turn
@@ -64,28 +102,38 @@ class GameStatus:
                     player_life -= 1
                 else:
                     dealer_life -= 1
+                turn = Turn.PLAYER if self._turn == Turn.DEALER else Turn.DEALER
             case MovementResult.SPECTACLE:
                 blank_num -= 1
-                turn = Turn.PLAYER if turn == Turn.DEALER else Turn.DEALER
+                turn = Turn.PLAYER if self._turn == Turn.DEALER else Turn.DEALER
             case MovementResult.KILL:
                 live_ammo_num -= 1
                 if self.is_player_turn():
                     dealer_life -= 1
                 else:
                     player_life -= 1
-                turn = Turn.PLAYER if turn == Turn.DEALER else Turn.DEALER
+                turn = Turn.PLAYER if self._turn == Turn.DEALER else Turn.DEALER
         if live_ammo_num == 0 and blank_num == 0:
             live_ammo_num = 3
             blank_num = 2
-        return GameStatus(turn, live_ammo_num, blank_num, player_life, dealer_life)
+            turn = Turn.PLAYER
 
-    def print_info(self):
-        if self.is_player_turn():
-            print(f'It is player turn, player life: {self._player_life}, dealer life: {self._dealer_life}, '
-                  f'blank num: {self._blank_num}, live ammo num: {self._live_ammo_num}')
-        else:
-            print(f'It is dealer turn, player life: {self._player_life}, dealer life: {self._dealer_life}, '
-                  f'blank num: {self._blank_num}, live ammo num: {self._live_ammo_num}')
+        next_status = GameStatus(turn, live_ammo_num, blank_num, player_life, dealer_life)
+        if need_print_info:
+            if next_status.is_player_win():
+                print("Player WINS!")
+            elif next_status.is_player_lose():
+                print("Player LOSES!")
+            else:
+                if next_status.is_player_turn():
+                    print(f'Next will be player turn, player life: {player_life}, dealer life: {dealer_life}, '
+                          f'blank num: {blank_num}, live ammo num: {live_ammo_num}')
+                else:
+                    print(f'Next will be dealer turn, player life: {player_life}, dealer life: {dealer_life}, '
+                          f'blank num: {blank_num}, live ammo num: {live_ammo_num}')
+            print("===================================")
+
+        return next_status
 
 
 class StageOneStrategy:
