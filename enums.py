@@ -10,12 +10,7 @@ class BulletType(Enum):
     BLANK = auto()
 
 class MovementOption(Enum):
+    NONE = auto()
     SHOT_OPPOSITE = auto()
     SHOT_SELF = auto()
-
-class MovementResult(Enum):
-    HAVE_GUTS = auto()
-    SUICIDE = auto()
-    SPECTACLE = auto()
-    KILL = auto()
 
